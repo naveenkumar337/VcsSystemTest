@@ -8,6 +8,7 @@
 </head>
 <body>
     <form id="form1" runat="server">
+        <div id="entry-tag">
     <div class="div-tab" style="position: relative; z-index: auto; top: -6px; left: 10px; width: 1180px;" tabindex="2">
         <div id="basic-details" style="width: 420px">
         <asp:Label ID="lblName" runat="server" Text="Name:"></asp:Label>
@@ -16,23 +17,21 @@
         <asp:TextBox ID="txtEmail" runat="server" required="required" ></asp:TextBox><br/>
         <asp:Label ID="lblCalender" runat="server" Text="Date of Birth:"></asp:Label>
             <asp:TextBox ID="txtcalnder" runat="server"></asp:TextBox><br/><br/>
-            <asp:Label ID="lblImage" runat="server" Text="Image:"></asp:Label><br/>
+            <asp:Label ID="lblImage" runat="server" Text="Image:"></asp:Label>
         <asp:FileUpload ID="fuImage" runat="server" /><br/>
             </div>
-        <div id="image-tab">
-            <asp:Image ID="Image1" ImageUrl="" EnableViewState="true"
-               Visible="true"  runat="server" Height="188px" Width="183px" />
-            </div>
         </div>
+
         <asp:Button ID="btnSubmit" runat="server" Text="Sumit" OnClick="btnSubmit_Click" /><br/>
         <br/>
+            </div>
         <asp:Label ID="Label1" runat="server" Text=""></asp:Label>
        
         <div id="gridView">
-        <asp:GridView ID="GridView1" runat="server" CellPadding="4" ForeColor="#333333" AutoGenerateColumns="false" 
+        <asp:GridView ID="GridView1" runat="server" CellPadding="4" ForeColor="#333333" AutoGenerateColumns="False" 
             GridLines="None" DataKeyNames="Eid" OnPageIndexChanging="GridView1_PageIndexChanging" 
             OnRowCancelingEdit="GridView1_RowCancelingEdit" OnRowDeleting="GridView1_RowDeleting" 
-            OnRowEditing="GridView1_RowEditing" OnRowUpdating="GridView1_RowUpdating" allowpaging="true" >
+            OnRowEditing="GridView1_RowEditing" OnRowUpdating="GridView1_RowUpdating" allowpaging="True" >
             <AlternatingRowStyle BackColor="White"  />
             <pagersettings mode="Numeric"
                         position="Bottom"           
@@ -57,9 +56,20 @@
                         <asp:BoundField DataField="Ename" HeaderText="Name" />  
                         <asp:BoundField DataField="Email" HeaderText="email" />
                         <asp:BoundField DataField="Dob" HeaderText="DOB" />  
-                        <asp:BoundField DataField="pic" HeaderText="Image_URL" Visible="true"/>  
+                 <asp:TemplateField HeaderText="Image_URL">
+                     <EditItemTemplate>
+                         <asp:FileUpload ID="FileUpload1" runat="server" style="margin-bottom: 0px" />
+                     </EditItemTemplate>
+                     <ItemTemplate>
+                         <asp:Image ID="image_file" runat="server" ImageUrl='<%#Eval("pic")%>' Height="100px" Width="100px"/>
+                     </ItemTemplate>
+                 </asp:TemplateField>
                         <asp:CommandField ShowEditButton="true" />  
-                        <asp:CommandField ShowDeleteButton="true" /> </Columns>
+                        <asp:CommandField ShowDeleteButton="true" /> 
+                        <asp:TemplateField></asp:TemplateField>
+                        <asp:TemplateField></asp:TemplateField>
+                        <asp:TemplateField></asp:TemplateField>
+            </Columns>
              <EmptyDataTemplate>
         <div align="center">No records found.</div>
     </EmptyDataTemplate>
@@ -70,7 +80,15 @@
         .div-tab {
             flex:2;
         display:flex;
-        
+        }
+        input[type=text] {
+        margin-left:45px;
+        }
+        input#txtcalnder {
+        margin-left:0px;
+        }
+        #fuImage {
+        margin-left:45px;
         }
     </style>
    <script>

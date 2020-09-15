@@ -9,14 +9,15 @@ using System.Data.Common;
 using System.Data.SqlClient;
 using System.Configuration;
 using System.IO;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace VcsSystem_MachineTest
 {
     public partial class WebForm1 : System.Web.UI.Page
     {
         string imagepath = @"E:\VS_Code\VcsSystem_MachineTest\VcsSystem_MachineTest\Images\";
-        SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings[
-               "connection"].ConnectionString);
+        SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings["connection"].ConnectionString);
         protected void Page_Load(object sender, EventArgs e)
         {
             if (!IsPostBack)
@@ -53,12 +54,17 @@ namespace VcsSystem_MachineTest
         }
         protected void GridView1_RowDeleting(object sender, GridViewDeleteEventArgs e)
         {
-            SqlCommand cmd = new SqlCommand("DeleteEmployee", conn);
-            cmd.CommandType = CommandType.StoredProcedure;
-            cmd.Parameters.AddWithValue("@eid", Convert.ToInt32(GridView1.DataKeys[e.RowIndex].Value.ToString()));
-            conn.Open();
-            cmd.ExecuteNonQuery();
-            conn.Close();
+            GridViewRow row = (GridViewRow)GridView1.Rows[e.RowIndex];
+            Image image = (Image)row.Cells[4].Controls[1];
+            if (fileDeleter(image.ImageUrl) != "")
+            {
+                SqlCommand cmd = new SqlCommand("DeleteEmployee", conn);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@eid", Convert.ToInt32(GridView1.DataKeys[e.RowIndex].Value.ToString()));
+                conn.Open();
+                cmd.ExecuteNonQuery();
+                conn.Close();
+            }
             binddata();
         }
         protected void GridView1_RowEditing(object sender, GridViewEditEventArgs e)
@@ -73,19 +79,23 @@ namespace VcsSystem_MachineTest
             TextBox Name = (TextBox)row.Cells[1].Controls[0];
             TextBox Email = (TextBox)row.Cells[2].Controls[0];
             TextBox Dob = (TextBox)row.Cells[3].Controls[0];
-            TextBox image = (TextBox)row.Cells[4].Controls[0];  
-            GridView1.EditIndex = -1;
-            SqlCommand cmd = new SqlCommand("UpdateEmployee", conn);
-            cmd.CommandType = CommandType.StoredProcedure;
-            cmd.Parameters.AddWithValue("@eid", userid);
-            cmd.Parameters.AddWithValue("@ename", Name.Text);
-            cmd.Parameters.AddWithValue("@email", Email.Text);
-            cmd.Parameters.AddWithValue("@dob", Convert.ToDateTime(Dob.Text));
-            cmd.Parameters.AddWithValue("@image", image.Text);
-            conn.Open();
-            cmd.ExecuteNonQuery();
-            conn.Close();
-            binddata();
+            FileUpload image = (FileUpload)row.Cells[4].Controls[1];
+            if (fileUploader(image.FileContent, image.FileName) != null)
+            {
+                GridView1.EditIndex = -1;
+                SqlCommand cmd = new SqlCommand("UpdateEmployee", conn);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@eid", userid);
+                cmd.Parameters.AddWithValue("@ename", Name.Text);
+                cmd.Parameters.AddWithValue("@email", Email.Text);
+                cmd.Parameters.AddWithValue("@dob", Convert.ToDateTime(Dob.Text));
+                cmd.Parameters.AddWithValue("@image", "~/Images/"+ image.FileName);
+                conn.Open();
+                cmd.ExecuteNonQuery();
+                conn.Close();
+            }
+                binddata();
+            
         }
         protected void GridView1_PageIndexChanging(object sender, GridViewPageEventArgs e)
         {
@@ -104,21 +114,31 @@ namespace VcsSystem_MachineTest
             emp.name = txtName.Text;
             emp.email = txtEmail.Text;
             emp.dob =Convert.ToDateTime(txtcalnder.Text);
-            emp.image = fuImage.FileName;
-            return emp;
+            if (fileUploader(fuImage.FileContent, fuImage.FileName) != "")
+            {
+                emp.image = fuImage.FileName;
+                return emp;
+
+            }
+            else {
+                return emp = null;
+            }
         }
 
         public int SaveData(Employee emp) {
-            SqlCommand cmd = new SqlCommand("AddEmployee", conn);
-            cmd.CommandType = CommandType.StoredProcedure;
-            cmd.Parameters.AddWithValue("@ename", emp.name);
-            cmd.Parameters.AddWithValue("@email", emp.email);
-            cmd.Parameters.AddWithValue("@dob", emp.dob);
-            cmd.Parameters.AddWithValue("@image", emp.image);
-            conn.Open();
-            var res= cmd.ExecuteNonQuery();
-            conn.Close();
-            
+            int res = 0;
+            if (emp != null)
+            {
+                SqlCommand cmd = new SqlCommand("AddEmployee", conn);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@ename", emp.name);
+                cmd.Parameters.AddWithValue("@email", emp.email);
+                cmd.Parameters.AddWithValue("@dob", emp.dob);
+                cmd.Parameters.AddWithValue("@image", "~/Images/"+emp.image);
+                conn.Open();
+                res = cmd.ExecuteNonQuery();
+                conn.Close();
+            }
             return res;
         }
         public void binddata()
@@ -141,6 +161,27 @@ namespace VcsSystem_MachineTest
             conn.Close();
         }
 
+        public string fileUploader(Stream stream,string name) {
+
+            CloudStorageAccount account = CloudStorageAccount.Parse(ConfigurationManager.ConnectionStrings["blobconnection"].ToString());
+            CloudBlobClient bclient = account.CreateCloudBlobClient();
+            CloudBlobContainer bcontainer = bclient.GetContainerReference(ConfigurationManager.AppSettings["container"]);
+            CloudBlockBlob bblock = bcontainer.GetBlockBlobReference(name);
+            bblock.UploadFromStream(stream);
+            return bblock.Uri.AbsoluteUri;
+        }
+
+        public string fileDeleter(string name)
+        {
+            name = name.Split('/').LastOrDefault().ToString();
+            CloudStorageAccount account = CloudStorageAccount.Parse(ConfigurationManager.ConnectionStrings["blobconnection"].ToString());
+            CloudBlobClient bclient = account.CreateCloudBlobClient();
+            CloudBlobContainer bcontainer = bclient.GetContainerReference(ConfigurationManager.AppSettings["container"]);
+            CloudBlockBlob bblock = bcontainer.GetBlockBlobReference(name);
+            //bblock.UploadFromStream(stream);
+            bblock.Delete();
+            return bblock.Uri.AbsoluteUri;
+        }
     }
    
     public class Employee {
